@@ -1,0 +1,42 @@
+name: Quality checks
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: quality
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - name: Set up PHP and Composer
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240
+        with:
+          php-version: "8.3"
+          tools: composer:v2
+          coverage: none
+
+      - name: Validate Composer manifest and lock file
+        run: composer validate --strict --no-check-publish
+
+      - name: Check PHP syntax
+        run: find . -type d \( -path './.local' -o -path './vendor' -o -path './node_modules' -o -path './.git' -o -path './storage' \) -prune -o -type f -name '*.php' -print0 | xargs -0 -r -n1 php -l
+
+      - name: Validate Docker Compose configuration
+        run: docker compose --env-file .env.example config --quiet

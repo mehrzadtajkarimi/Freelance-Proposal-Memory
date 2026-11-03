@@ -1,0 +1,45 @@
+name: Bug report
+description: Report a reproducible problem
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: "Do not include credentials, client information, real proposals, or private freelancer data."
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: Describe the problem and what you expected to happen.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      placeholder: "1. Run ...\n2. Enter ...\n3. See ..."
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      placeholder: "For example: v0.1.0 or commit SHA"
+    validations:
+      required: true
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Environment
+      options:
+        - Docker
+        - Local PHP
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant sanitized logs
+      description: Remove tokens, passwords, personal information, and client data before posting.
+    validations:
+      required: false
