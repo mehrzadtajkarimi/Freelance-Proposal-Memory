@@ -27,6 +27,8 @@ final class ApproveRuleVersion
             ])->save();
 
             $rule->forceFill([
+                'title' => $version->title ?? $rule->title,
+                'priority' => $version->priority ?? $rule->priority,
                 'status' => 'approved',
                 'current_version' => $version->version,
                 'approved_at' => now(),

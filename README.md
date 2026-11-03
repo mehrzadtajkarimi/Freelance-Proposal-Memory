@@ -11,6 +11,8 @@ The current release includes a bilingual Persian/English web dashboard for revie
 - Record incoming and outgoing client messages against a project.
 - Maintain global and project-specific rules with explicit approval for rule changes.
 - Store one private freelancer profile with separate Persian and English details, technologies, services, and languages for proposal context.
+- Guide each installation through a prioritized, optional setup flow, with a private JSON import for an existing profile and approved global rules.
+- Export and import a portable personal data package from the panel without adding user data to public seeders or source files.
 - Track workflow runs and events, including the environment and rule versions used.
 - Export approved global rules to a local Markdown file.
 - Run with MySQL and Redis in Docker Compose, or use SQLite for a lightweight local setup.
@@ -75,17 +77,26 @@ php artisan memory:record-proposal
 php artisan memory:record-message
 php artisan memory:report
 php artisan memory:export-rules
+php artisan memory:export-data
 ```
 
-Request and proposal commands accept JSON through standard input; rule-management and reporting commands use command options. Run a command with `--help` for its exact arguments. The profile form edits the Persian or English profile according to the selected panel language. `memory:context --locale=fa` or `memory:context --locale=en` returns the matching profile and proposal-language instructions, along with approved rules and optional project-specific history. Proposal JSON may include `content_locale` (`fa` or `en`); drafts retain that locale. This prepares context for an external AI workflow; the app does not call an AI provider. The freelancer profile is kept in the local database and is not included in public seed data. A proposal draft is not marked as submitted unless the submission command is explicitly run.
+Request and proposal commands accept JSON through standard input; rule-management and reporting commands use command options. Run a command with `--help` for its exact arguments. The profile form edits the Persian or English profile according to the selected panel language. `memory:context --locale=fa` or `memory:context --locale=en` returns the matching profile and proposal-language instructions, along with approved rules and optional project-specific history. Archived document bodies are omitted from normal context output; use `--include-archived-bodies` only for an explicit legacy-source audit. Proposal JSON may include `content_locale` (`fa` or `en`); drafts retain that locale. The app provides context and stores draft text for review and manual copying; it does not generate proposals, call an AI provider, or submit to freelance platforms. The freelancer profile is kept in the local database and is not included in public seed data. A proposal draft is not marked as submitted unless the user confirms that they sent it and the submission command is explicitly run.
+
+For every proposal request, the workspace agent must search the request and load fresh context from the database in the same turn. If a saved request clearly matches, load context with its project ID; otherwise save a sanitized request and load its context before drafting. The agent must read the full guidance and all applicable approved rules each time, including follow-up revisions. The mandatory sequence is documented in `AGENTS.md`.
 
 For a request with a USD budget, pass `title`, `body`, `platform`, `budget_min_amount`, `budget_max_amount`, and `currency` in the JSON object. When saving a proposal, pass `body`, `price_amount`, a three-letter currency code such as `USD`, `delivery_days`, and `assumptions`; `content_locale` is optional and defaults to English. `estimate` and `payment_terms` are optional JSON objects.
 
 The `/health` endpoint returns application readiness and database connectivity as JSON. On first Docker startup, frontend dependencies are installed and Tailwind assets are built when they are missing. For local development, install Node.js and run `npm install` followed by `npm run dev` or `npm run build`.
 
+The context source boundaries and the matching Artisan command sequence are documented in [`docs/context-sources.md`](docs/context-sources.md).
+
 ## Privacy and backups
 
 Proposal requests, messages, estimates, and custom rules may contain confidential information. Keep `.env`, local database files, SQL dumps, and private exports out of Git. The public seeders only create generic starter rules. Never add client records, personal profiles, credentials, or private proposal guidelines to a public seeder or fixture.
+
+The first visit opens a setup page with two choices: import an existing personal JSON package or answer prioritized setup questions one step at a time. Every question and the whole setup can be skipped. The panel's **Personal data file** page (`/settings/data`) exports and imports the same package. It contains the private freelancer profile, work experience, and currently approved global rules; it does not include client requests, proposals, messages, or project-specific rules. Store exported files privately and share them directly with the intended person; do not commit them.
+
+New or changed rules in an imported package are saved as pending versions. They become active only after explicit approval in the destination installation.
 
 The database volume persists when containers stop. `docker compose down -v` removes the volumes and their data. Back up the database before upgrading or removing volumes.
 

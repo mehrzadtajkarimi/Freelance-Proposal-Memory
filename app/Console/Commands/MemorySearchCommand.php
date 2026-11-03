@@ -2,18 +2,19 @@
 
 namespace App\Console\Commands;
 
+use App\Models\FreelancerProfile;
 use App\Models\ProjectRequest;
-use App\Models\Rule;
 use App\Services\JsonInputReader;
+use App\Services\MemorySearch;
 use Illuminate\Console\Command;
 
 final class MemorySearchCommand extends Command
 {
     protected $signature = 'memory:search {query? : Title, request text, or a rule phrase} {--stdin-json : Read title and text from standard input} {--project-id= : Limit project-specific rules to this request}';
 
-    protected $description = 'Search saved project requests and approved persistent rules';
+    protected $description = 'Search saved project requests and approved persistent rules by relevance';
 
-    public function handle(JsonInputReader $inputReader): int
+    public function handle(JsonInputReader $inputReader, MemorySearch $search): int
     {
         $input = null;
         if ($this->option('stdin-json')) {
@@ -25,21 +26,27 @@ final class MemorySearchCommand extends Command
             }
         }
 
-        $title = trim((string) ($input['title'] ?? ''));
-        $text = trim((string) ($input['text'] ?? $this->argument('query') ?? ''));
+        $title = is_string($input['title'] ?? null) ? trim($input['title']) : '';
+        $text = is_string($input['text'] ?? null)
+            ? trim($input['text'])
+            : trim((string) ($this->argument('query') ?? ''));
         if ($title === '' && $text === '') {
             $this->error('Provide a title/query or non-empty JSON title/text.');
 
             return self::INVALID;
         }
 
-        $terms = collect(preg_split('/[\s،؛,.!?؟]+/u', trim($title.' '.$text)) ?: [])
-            ->map(fn (string $term): string => trim($term))
-            ->filter(fn (string $term): bool => mb_strlen($term) >= 3)
-            ->unique()
-            ->take(16)
-            ->values();
+        $projectId = null;
+        if ($this->option('project-id') !== null) {
+            $projectId = filter_var($this->option('project-id'), FILTER_VALIDATE_INT);
+            if ($projectId === false || $projectId < 1) {
+                $this->error('The project ID must be a positive integer.');
 
+                return self::INVALID;
+            }
+        }
+
+        $terms = $search->terms($title, $text);
         $exact = $title !== ''
             ? ProjectRequest::query()
                 ->where('title', $title)
@@ -49,58 +56,45 @@ final class MemorySearchCommand extends Command
                 ->get()
             : collect();
 
-        if ($exact->isNotEmpty()) {
+        $ambiguousExactTitle = $exact->count() > 1;
+        if ($exact->count() === 1 || ($exact->isNotEmpty() && ($text === '' || $terms === []))) {
             $requests = $exact;
             $matchType = 'exact_title';
+        } elseif ($ambiguousExactTitle && $terms !== []) {
+            $requests = $search->searchRequests($terms, $search->searchText($terms), $title, $title);
+            $matchType = 'ranked_exact_title';
+        } elseif ($terms === []) {
+            $this->error('No searchable terms remain after removing common words. Include a specific project word or phrase.');
+
+            return self::INVALID;
         } else {
-            $requests = ProjectRequest::query()
-                ->where(function ($query) use ($terms): void {
-                    foreach ($terms as $term) {
-                        $pattern = '%'.$term.'%';
-                        $query->orWhere('title', 'like', $pattern)
-                            ->orWhere('request_body', 'like', $pattern)
-                            ->orWhereHas('legacyDocument', fn ($legacy) => $legacy->where('body', 'like', $pattern))
-                            ->orWhereHas('proposals', fn ($proposal) => $proposal->where('body', 'like', $pattern))
-                            ->orWhereHas('messages', fn ($message) => $message->where('body', 'like', $pattern));
-                    }
-                })
-                ->with(['proposals' => fn ($query) => $query->orderByDesc('version')])
-                ->orderByDesc('updated_at')
-                ->limit(10)
-                ->get();
+            $requests = $search->searchRequests($terms, $search->searchText($terms), $title);
             $matchType = 'text_candidates';
         }
 
-        $rules = Rule::query()
-            ->where('status', 'approved')
-            ->when($this->option('project-id'), function ($query, $projectId): void {
-                $query->where(function ($scope) use ($projectId): void {
-                    $scope->where('scope', 'global')
-                        ->orWhere('project_request_id', (int) $projectId);
-                });
-            }, fn ($query) => $query->where('scope', 'global'))
-            ->where(function ($query) use ($terms): void {
-                foreach ($terms as $term) {
-                    $pattern = '%'.$term.'%';
-                    $query->orWhere('title', 'like', $pattern)
-                        ->orWhereHas('versions', fn ($version) => $version
-                            ->where('status', 'approved')
-                            ->whereColumn('rule_versions.version', 'rules.current_version')
-                            ->where('body', 'like', $pattern));
-                }
-            })
-            ->with(['versions' => fn ($query) => $query->where('status', 'approved')->orderByDesc('version')])
-            ->orderBy('priority')
-            ->limit(10)
-            ->get();
+        $rules = $terms === []
+            ? collect()
+            : $search->searchRules($terms, $search->searchText($terms), $projectId);
 
         $this->line(json_encode([
             'result' => $matchType,
+            'query_terms' => $terms,
             'matches' => $requests->count(),
-            'ambiguous_exact_title' => $matchType === 'exact_title' && $requests->count() > 1,
+            'ambiguous_exact_title' => $ambiguousExactTitle,
         ], JSON_UNESCAPED_UNICODE));
+
+        $profile = FreelancerProfile::query()->where('profile_key', 'primary')->first();
+        $this->line('MANDATORY EXPERIENCE REVIEW FOR THIS REQUEST');
+        $this->line(json_encode([
+            'required_review' => true,
+            'instruction' => 'Compare every saved experience with the supplied request title and full request text. Use directly relevant entries as factual evidence and do not infer experience from unrelated entries.',
+            'experiences' => $profile?->experienceContextValues() ?? [],
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+
         $this->line('PROJECT REQUESTS');
         foreach ($requests as $request) {
+            $isExact = $matchType === 'exact_title';
+            $basis = $isExact ? ['exact_title'] : $this->requestMatchBasis($request);
             $this->line(json_encode([
                 'id' => $request->id,
                 'title' => $request->title,
@@ -109,6 +103,8 @@ final class MemorySearchCommand extends Command
                 'budget_min_amount' => $request->budget_min_amount,
                 'budget_max_amount' => $request->budget_max_amount,
                 'currency' => $request->currency,
+                'match_score' => $isExact ? 10000 : $this->requestScore($request),
+                'match_basis' => $basis,
                 'request' => mb_substr($request->request_body, 0, 1200),
                 'latest_proposal' => $request->proposals->first()?->only(['version', 'status', 'content_locale', 'body', 'price_amount', 'currency', 'delivery_days', 'estimate']),
             ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
@@ -120,12 +116,87 @@ final class MemorySearchCommand extends Command
             $this->line(json_encode([
                 'id' => $rule->id,
                 'scope' => $rule->scope,
-                'title' => $rule->title,
+                'title' => $version?->title ?? $rule->title,
                 'version' => $version?->version,
+                'priority' => $version?->priority ?? $rule->priority,
+                'match_score' => $this->ruleScore($rule),
+                'match_basis' => $this->ruleMatchBasis($rule),
                 'body' => $version?->body,
+                'source_type' => $version?->source_type,
+                'source_reference' => $version?->source_reference,
+                'change_summary' => $version?->change_summary,
             ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
         }
 
         return self::SUCCESS;
+    }
+
+    /** @return list<string> */
+    private function requestMatchBasis(ProjectRequest $request): array
+    {
+        $basis = [];
+        if ($this->scoreAttribute($request, 'title_phrase_score') > 0) {
+            $basis[] = 'title_phrase';
+        }
+        if ($this->scoreAttribute($request, 'title_score') > 0) {
+            $basis[] = 'title';
+        }
+        if ($this->scoreAttribute($request, 'request_score') > 0) {
+            $basis[] = 'request_text';
+        }
+        foreach ([
+            'proposal_score' => 'proposal_history',
+            'message_score' => 'client_messages',
+            'legacy_score' => 'legacy_source',
+        ] as $attribute => $label) {
+            if ($this->scoreAttribute($request, $attribute) > 0) {
+                $basis[] = $label;
+            }
+        }
+
+        return $basis;
+    }
+
+    private function requestScore(ProjectRequest $request): float
+    {
+        if (! array_key_exists('title_score', $request->getAttributes())) {
+            return $this->scoreAttribute($request, 'request_score') * 8
+                + $this->scoreAttribute($request, 'title_phrase_score')
+                + $this->scoreAttribute($request, 'proposal_score') * 3
+                + $this->scoreAttribute($request, 'message_score') * 2
+                + $this->scoreAttribute($request, 'legacy_score');
+        }
+
+        return $this->scoreAttribute($request, 'title_phrase_score')
+            + $this->scoreAttribute($request, 'title_score') * 8
+            + $this->scoreAttribute($request, 'request_score') * 4
+            + $this->scoreAttribute($request, 'proposal_score') * 3
+            + $this->scoreAttribute($request, 'message_score') * 2
+            + $this->scoreAttribute($request, 'legacy_score');
+    }
+
+    /** @return list<string> */
+    private function ruleMatchBasis(object $rule): array
+    {
+        $basis = [];
+        if ($this->scoreAttribute($rule, 'title_score') > 0) {
+            $basis[] = 'rule_title';
+        }
+        if ($this->scoreAttribute($rule, 'body_score') > 0) {
+            $basis[] = 'rule_body';
+        }
+
+        return $basis;
+    }
+
+    private function ruleScore(object $rule): float
+    {
+        return $this->scoreAttribute($rule, 'title_score') * 5
+            + $this->scoreAttribute($rule, 'body_score') * 2;
+    }
+
+    private function scoreAttribute(object $model, string $attribute): float
+    {
+        return (float) ($model->getAttribute($attribute) ?? 0);
     }
 }

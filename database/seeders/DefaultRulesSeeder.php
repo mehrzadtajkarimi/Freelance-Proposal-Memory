@@ -40,6 +40,8 @@ final class DefaultRulesSeeder extends Seeder
                 RuleVersion::query()->create([
                     'rule_id' => $rule->id,
                     'version' => 1,
+                    'title' => $rule->title,
+                    'priority' => $rule->priority,
                     'body' => $body,
                     'status' => 'approved',
                     'source_type' => 'public_default',

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\FreelancerProfile;
 use App\Models\ProjectRequest;
 use App\Models\ProposalVersion;
 use App\Models\Rule;
@@ -18,6 +19,11 @@ final class WorkspacePagesTest extends TestCase
 
     public function test_health_and_dashboard_use_real_saved_data(): void
     {
+        FreelancerProfile::query()->create([
+            'profile_key' => 'primary',
+            'setup_completed_at' => now(),
+        ]);
+
         $projectRequest = $this->createProjectRequest();
         $this->createProposalDraft($projectRequest);
         $this->createWorkflowEvent([

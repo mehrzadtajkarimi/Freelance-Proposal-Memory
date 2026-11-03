@@ -29,6 +29,7 @@
                         ['route' => 'rules.*', 'label' => 'ui.nav.rules', 'icon' => 'M12 3.75 5.25 6v5.25c0 4.18 2.88 7.9 6.75 9 3.87-1.1 6.75-4.82 6.75-9V6L12 3.75ZM9 12l1.9 1.9L15 9.75'],
                         ['route' => 'reports.index', 'label' => 'ui.nav.reports', 'icon' => 'M4.5 19.5V12m5.25 7.5V6m5.25 13.5v-9m5.25 9V3.75'],
                         ['route' => 'settings.freelancer.edit', 'label' => 'ui.nav.freelancer_profile', 'icon' => 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm7.5 8.25a7.5 7.5 0 0 0-15 0'],
+                        ['route' => 'settings.data', 'label' => 'ui.nav.personal_data', 'icon' => 'M12 3.75v16.5m8.25-8.25H3.75m2.4-5.85 11.7 11.7m0-11.7L6.15 17.85'],
                     ];
                 @endphp
                 @foreach ($navigation as $item)

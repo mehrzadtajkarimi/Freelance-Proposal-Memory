@@ -4,15 +4,22 @@ namespace App\Http\Controllers;
 
 use App\Models\ProjectRequest;
 use App\Models\ProposalVersion;
+use App\Models\FreelancerProfile;
 use App\Models\RuleVersion;
 use App\Models\WorkflowEvent;
 use App\Models\WorkflowRun;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
 
 final class DashboardController
 {
-    public function __invoke(): View
+    public function __invoke(): View|RedirectResponse
     {
+        $profile = FreelancerProfile::query()->where('profile_key', 'primary')->first();
+        if (! $profile?->setup_completed_at) {
+            return redirect()->route('onboarding.index');
+        }
+
         $runGroups = WorkflowRun::query()
             ->selectRaw('source_environment, COUNT(*) AS total')
             ->groupBy('source_environment')

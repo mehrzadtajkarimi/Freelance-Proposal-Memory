@@ -3,6 +3,8 @@
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FreelancerProfileController;
 use App\Http\Controllers\LocaleController;
+use App\Http\Controllers\OnboardingController;
+use App\Http\Controllers\PersonalDataController;
 use App\Http\Controllers\ProjectRequestController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RuleController;
@@ -34,6 +36,24 @@ Route::post('/locale/{locale}', [LocaleController::class, 'update'])
 
 Route::middleware(SetLocale::class)->group(function (): void {
     Route::get('/', DashboardController::class)->name('dashboard');
+    Route::get('/setup', [OnboardingController::class, 'index'])->name('onboarding.index');
+    Route::post('/setup/start', [OnboardingController::class, 'start'])->name('onboarding.start');
+    Route::get('/setup/step/{step}', [OnboardingController::class, 'showStep'])
+        ->where('step', 'profile|expertise|writing|estimates')
+        ->name('onboarding.step');
+    Route::post('/setup/step/{step}', [OnboardingController::class, 'saveStep'])
+        ->where('step', 'profile|expertise|writing|estimates')
+        ->name('onboarding.save-step');
+    Route::post('/setup/step/{step}/skip', [OnboardingController::class, 'skipStep'])
+        ->where('step', 'profile|expertise|writing|estimates')
+        ->name('onboarding.skip-step');
+    Route::post('/setup/skip', [OnboardingController::class, 'skip'])->name('onboarding.skip');
+    Route::post('/setup/import', [OnboardingController::class, 'import'])->name('onboarding.import');
+
+    Route::get('/settings/data', [PersonalDataController::class, 'index'])->name('settings.data');
+    Route::get('/settings/data/export', [PersonalDataController::class, 'export'])->name('settings.data.export');
+    Route::post('/settings/data/import', [PersonalDataController::class, 'import'])->name('settings.data.import');
+
     Route::get('/requests', [ProjectRequestController::class, 'index'])->name('requests.index');
     Route::put('/requests/{projectRequest}/full-time', [ProjectRequestController::class, 'updateFullTime'])
         ->name('requests.full-time.update');

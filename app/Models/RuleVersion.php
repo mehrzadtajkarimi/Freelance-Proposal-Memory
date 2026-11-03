@@ -12,6 +12,8 @@ final class RuleVersion extends Model
     protected $fillable = [
         'rule_id',
         'version',
+        'title',
+        'priority',
         'body',
         'status',
         'source_type',
@@ -25,6 +27,7 @@ final class RuleVersion extends Model
     {
         return [
             'version' => 'integer',
+            'priority' => 'integer',
             'approved_at' => 'datetime',
             'created_at' => 'datetime',
         ];

@@ -45,6 +45,12 @@
                     @if ($version->change_summary)
                         <p class="mt-3 text-sm font-medium text-slate-700">{{ $version->change_summary }}</p>
                     @endif
+                    @if ($version->title !== null && $version->title !== $rule->title)
+                        <p class="mt-3 text-sm text-slate-700">{{ __('ui.rules.proposed_title') }}: {{ $version->title }}</p>
+                    @endif
+                    @if ($version->priority !== null && $version->priority !== $rule->priority)
+                        <p class="mt-2 text-sm text-slate-700">{{ __('ui.rules.proposed_priority') }}: {{ $version->priority }}</p>
+                    @endif
                     <p class="mt-3 whitespace-pre-line text-sm leading-6 text-slate-600">{{ $version->body }}</p>
                     @if ($version->status === 'pending_approval')
                         <div class="mt-4 flex flex-col justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3.5 sm:flex-row sm:items-center">

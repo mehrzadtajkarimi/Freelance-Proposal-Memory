@@ -18,6 +18,8 @@ final class ProposeRuleChange
             $versionNumber = ((int) $rule->versions()->max('version')) + 1;
             $version = $rule->versions()->create([
                 'version' => $versionNumber,
+                'title' => $rule->title,
+                'priority' => $rule->priority,
                 'body' => $body,
                 'status' => 'pending_approval',
                 'source_type' => 'user_change_request',

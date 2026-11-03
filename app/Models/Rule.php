@@ -23,6 +23,7 @@ final class Rule extends Model
     {
         return [
             'current_version' => 'integer',
+            'priority' => 'integer',
             'approved_at' => 'datetime',
         ];
     }

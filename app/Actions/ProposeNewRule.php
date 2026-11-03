@@ -31,6 +31,8 @@ final class ProposeNewRule
 
             $version = $rule->versions()->create([
                 'version' => 1,
+                'title' => $title,
+                'priority' => 100,
                 'body' => $body,
                 'status' => 'pending_approval',
                 'source_type' => 'user_change_request',

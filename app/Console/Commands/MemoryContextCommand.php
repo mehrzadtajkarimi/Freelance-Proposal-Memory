@@ -10,7 +10,7 @@ use Illuminate\Console\Command;
 
 final class MemoryContextCommand extends Command
 {
-    protected $signature = 'memory:context {--project-id= : Include one saved project and its full history} {--locale= : Proposal output language (fa or en)}';
+    protected $signature = 'memory:context {--project-id= : Include one saved project and its full history} {--locale= : Proposal output language (fa or en)} {--include-archived-bodies : Include inactive imported instruction bodies for an explicit audit}';
 
     protected $description = 'Load approved guidance and, when selected, one project history from the database';
 
@@ -26,6 +26,30 @@ final class MemoryContextCommand extends Command
         $this->line('PROPOSAL LANGUAGE');
         $this->line(json_encode(['content_locale' => $locale], JSON_UNESCAPED_UNICODE));
 
+        $this->line('CONTEXT SOURCE MAP');
+        $this->line(json_encode([
+            'agent_workflow' => [
+                'source' => 'AGENTS.md',
+                'role' => 'Repository-level workflow and proposal-writing instructions.',
+            ],
+            'freelancer_facts' => [
+                'source' => 'freelancer_profiles and freelancer_experiences tables',
+                'role' => 'Evidence for freelancer identity, skills, and work history.',
+            ],
+            'approved_guidance' => [
+                'source' => 'rules and rule_versions tables',
+                'role' => 'Only the current approved version is active; imported changes remain pending until approved.',
+            ],
+            'project_history' => [
+                'source' => 'project_requests, proposal_versions, conversation_messages, workflow_runs, and workflow_events tables',
+                'role' => 'Project-specific facts and history; do not treat them as global rules.',
+            ],
+            'legacy_documents' => [
+                'source' => 'legacy_documents table',
+                'role' => 'Reference material; active reusable policy belongs in an approved rule version.',
+            ],
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+
         $profile = FreelancerProfile::query()->where('profile_key', 'primary')->first();
         if ($profile) {
             $this->line('FREELANCER PROFILE');
@@ -35,16 +59,42 @@ final class MemoryContextCommand extends Command
             ));
         }
 
-        $this->line('SYSTEM GUIDANCE');
-        LegacyDocument::query()
+        $this->line('MANDATORY EXPERIENCE REVIEW');
+        $this->line(json_encode([
+            'required_for_every_request' => true,
+            'instructions' => [
+                'Review every saved experience against the current request title and full request text before preparing a proposal.',
+                'Use only experience that directly relates to the request, and state only details supported by the saved entry.',
+                'Do not imply experience in an area when no relevant saved entry exists.',
+            ],
+            'experiences' => $profile?->localizedExperiences($locale) ?? [],
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+
+        $this->line('ARCHIVED REFERENCE SOURCES (NOT ACTIVE RULES)');
+        $includeArchivedBodies = (bool) $this->option('include-archived-bodies');
+        $archivedDocuments = LegacyDocument::query()
             ->whereIn('document_type', ['agent_instructions', 'system_guidelines'])
-            ->orderBy('source_path')
-            ->get()
-            ->each(fn (LegacyDocument $document) => $this->line(json_encode([
+            ->orderBy('source_path');
+
+        if (! $includeArchivedBodies) {
+            $archivedDocuments->select(['id', 'source_path', 'title']);
+        }
+
+        $archivedDocuments->get()->each(function (LegacyDocument $document) use ($includeArchivedBodies): void {
+            $reference = [
                 'source' => $document->source_path,
                 'title' => $document->title,
-                'body' => $document->body,
-            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)));
+                'active_policy' => false,
+                'body_included' => $includeArchivedBodies,
+                'instruction' => 'Historical reference only. Do not apply as current policy; use only current approved rule versions as active reusable guidance.',
+            ];
+
+            if ($includeArchivedBodies) {
+                $reference['body'] = $document->body;
+            }
+
+            $this->line(json_encode($reference, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+        });
 
         $rules = Rule::query()
             ->where('status', 'approved')
@@ -66,9 +116,14 @@ final class MemoryContextCommand extends Command
             $this->line(json_encode([
                 'id' => $rule->id,
                 'scope' => $rule->scope,
-                'title' => $rule->title,
+                'title' => $version?->title ?? $rule->title,
                 'version' => $rule->current_version,
+                'priority' => $version?->priority ?? $rule->priority,
                 'body' => $version?->body,
+                'source_type' => $version?->source_type,
+                'source_reference' => $version?->source_reference,
+                'change_summary' => $version?->change_summary,
+                'approved_at' => $version?->approved_at,
             ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
         }
 
@@ -97,17 +152,18 @@ final class MemoryContextCommand extends Command
 
         $this->line('PROPOSAL TASK');
         $this->line(json_encode([
-            'task' => 'Prepare a concise, tailored client-facing proposal draft for the selected project request.',
+                'task' => 'Prepare a concise, tailored client-facing proposal draft for the selected project request. The app does not generate proposals or submit to freelance platforms; return text for review and manual copying only.',
             'content_locale' => $locale,
             'language_instruction' => $locale === 'fa'
                 ? 'Write all client-facing text in Persian.'
                 : 'Write all client-facing text in English.',
             'instructions' => [
                 'Use only relevant facts from the freelancer profile and approved rules.',
+                'Review every saved work experience against this project title and full request before writing; mention only directly relevant, supported experience.',
                 'Do not invent skills, experience, results, credentials, prices, or delivery dates.',
                 'Address the request with a concrete approach without repeating its text.',
                 'Mention the possibility of continued collaboration after project completion only when this project is marked as full-time.',
-                'Return a draft for review; do not claim it has been submitted.',
+                'Return a draft for review and manual copying; do not submit it or claim it has been submitted.',
             ],
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 
@@ -139,9 +195,13 @@ final class MemoryContextCommand extends Command
                 'finished_at' => $run->finished_at,
                 'result_summary' => $run->result_summary,
                 'rules' => $run->ruleVersions->map(fn ($version) => [
-                    'title' => $version->rule?->title,
+                    'title' => $version->title ?? $version->rule?->title,
                     'version' => $version->version,
+                    'priority' => $version->priority ?? $version->rule?->priority,
                     'body' => $version->body,
+                    'source_type' => $version->source_type,
+                    'source_reference' => $version->source_reference,
+                    'change_summary' => $version->change_summary,
                 ])->values(),
                 'events' => $run->events->map->only(['event_type', 'status', 'occurred_at', 'message']),
             ]),
