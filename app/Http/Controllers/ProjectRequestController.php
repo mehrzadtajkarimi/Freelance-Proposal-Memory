@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ProjectRequest;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
 
 final class ProjectRequestController
 {
@@ -23,5 +24,20 @@ final class ProjectRequestController
             ->withQueryString();
 
         return view('requests.index', compact('requests', 'filters'));
+    }
+
+    public function updateFullTime(Request $request, ProjectRequest $projectRequest): RedirectResponse
+    {
+        $validated = $request->validate([
+            'is_full_time' => ['required', 'boolean'],
+        ]);
+
+        $projectRequest->update([
+            'is_full_time' => (bool) $validated['is_full_time'],
+        ]);
+
+        return redirect()
+            ->route('reports.index')
+            ->with('success', __('ui.reports.full_time_saved'));
     }
 }

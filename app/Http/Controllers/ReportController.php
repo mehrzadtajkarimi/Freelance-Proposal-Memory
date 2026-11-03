@@ -53,6 +53,10 @@ final class ReportController
 
         return view('reports.index', [
             'filters' => $filters,
+            'projectRequests' => ProjectRequest::query()
+                ->orderByDesc('updated_at')
+                ->paginate(12, ['*'], 'projects_page')
+                ->withQueryString(),
             'requestCount' => $requestCount,
             'draftCount' => $draftCount,
             'submittedCount' => $submittedCount,

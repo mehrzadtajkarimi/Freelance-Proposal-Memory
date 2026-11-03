@@ -21,6 +21,7 @@ final class ProjectRequest extends Model
         'budget_max_amount',
         'currency',
         'client_deadline_days',
+        'is_full_time',
         'metadata',
     ];
 
@@ -29,6 +30,7 @@ final class ProjectRequest extends Model
         return [
             'budget_min_amount' => 'decimal:4',
             'budget_max_amount' => 'decimal:4',
+            'is_full_time' => 'boolean',
             'metadata' => 'array',
         ];
     }

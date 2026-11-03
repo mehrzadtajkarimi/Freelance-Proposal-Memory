@@ -52,6 +52,38 @@
         <p>{{ __('ui.reports.filter_note') }}</p>
     </div>
 
+    <section class="panel mt-6 overflow-hidden">
+        <div class="border-b border-slate-100 px-5 py-4 sm:px-6">
+            <h2 class="font-semibold text-slate-950">{{ __('ui.reports.project_conditions') }}</h2>
+            <p class="mt-1 text-sm leading-6 text-slate-500">{{ __('ui.reports.project_conditions_hint') }}</p>
+        </div>
+        @if ($projectRequests->isEmpty())
+            <x-empty-state :title="__('ui.reports.no_project_requests')" />
+        @else
+            <div class="divide-y divide-slate-100">
+                @foreach ($projectRequests as $project)
+                    <form method="POST" action="{{ route('requests.full-time.update', $project) }}" class="flex flex-col gap-4 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+                        @csrf
+                        @method('PUT')
+                        <div class="min-w-0">
+                            <p class="break-words text-sm font-semibold text-slate-800">{{ $project->title }}</p>
+                            <p class="mt-1 text-xs text-slate-500">{{ $project->platform }}</p>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-4">
+                            <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                                <input type="hidden" name="is_full_time" value="0">
+                                <input class="size-4 rounded border-slate-300 text-teal-700 focus:ring-teal-600" type="checkbox" name="is_full_time" value="1" @checked($project->is_full_time)>
+                                <span>{{ __('ui.reports.is_full_time') }}</span>
+                            </label>
+                            <button type="submit" class="btn-secondary">{{ __('ui.common.save') }}</button>
+                        </div>
+                    </form>
+                @endforeach
+            </div>
+            <div class="border-t border-slate-100 px-5 py-4 sm:px-6">{{ $projectRequests->links() }}</div>
+        @endif
+    </section>
+
     <section id="negotiations" class="panel mt-6 overflow-hidden">
         <div class="border-b border-slate-100 px-5 py-4 sm:px-6">
             <h2 class="font-semibold text-slate-950">{{ __('ui.reports.negotiations') }}</h2>

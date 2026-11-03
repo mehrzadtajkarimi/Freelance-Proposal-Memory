@@ -39,6 +39,7 @@ final class MemoryRecordRequestCommand extends Command
             ? strtoupper(trim($input['currency']))
             : null;
         $deadlineDays = $input['client_deadline_days'] ?? null;
+        $isFullTime = $input['is_full_time'] ?? false;
         $validStatuses = ['draft', 'negotiating', 'agreed', 'submitted', 'closed', 'cancelled'];
         $validOptionalAmounts = static fn (mixed $value): bool => $value === null
             || ((is_int($value) || is_float($value) || is_string($value))
@@ -52,6 +53,7 @@ final class MemoryRecordRequestCommand extends Command
             || ! $validOptionalAmounts($budgetMin)
             || ! $validOptionalAmounts($budgetMax)
             || ! $validOptionalIntegers($deadlineDays)
+            || ! in_array($isFullTime, [true, false, 0, 1, '0', '1'], true)
             || ($deadlineDays !== null && (int) $deadlineDays < 1)
             || ($budgetMin !== null && $budgetMax !== null && (float) $budgetMin > (float) $budgetMax)
             || ($currency !== null && ! preg_match('/^[A-Z]{3}$/D', $currency))
@@ -63,7 +65,7 @@ final class MemoryRecordRequestCommand extends Command
 
         $metadata = $sanitizer->redactMetadata(is_array($input['metadata'] ?? null) ? $input['metadata'] : []);
 
-        $request = DB::transaction(function () use ($input, $metadata, $status, $budgetMin, $budgetMax, $currency, $deadlineDays, $sanitizer, $recorder): ProjectRequest {
+        $request = DB::transaction(function () use ($input, $metadata, $status, $budgetMin, $budgetMax, $currency, $deadlineDays, $isFullTime, $sanitizer, $recorder): ProjectRequest {
             $request = ProjectRequest::query()->create([
                 'platform' => $input['platform'] ?? 'other',
                 'external_id' => isset($input['external_id']) ? $sanitizer->redact((string) $input['external_id']) : null,
@@ -74,6 +76,7 @@ final class MemoryRecordRequestCommand extends Command
                 'budget_max_amount' => $budgetMax,
                 'currency' => $currency,
                 'client_deadline_days' => $deadlineDays,
+                'is_full_time' => (bool) $isFullTime,
                 'metadata' => $metadata !== [] ? $metadata : null,
             ]);
 

@@ -106,6 +106,7 @@ final class MemoryContextCommand extends Command
                 'Use only relevant facts from the freelancer profile and approved rules.',
                 'Do not invent skills, experience, results, credentials, prices, or delivery dates.',
                 'Address the request with a concrete approach without repeating its text.',
+                'Mention the possibility of continued collaboration after project completion only when this project is marked as full-time.',
                 'Return a draft for review; do not claim it has been submitted.',
             ],
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
@@ -121,6 +122,7 @@ final class MemoryContextCommand extends Command
             'budget_max_amount' => $project->budget_max_amount,
             'currency' => $project->currency,
             'client_deadline_days' => $project->client_deadline_days,
+            'is_full_time' => $project->is_full_time,
             'metadata' => $project->metadata,
             'proposals' => $project->proposals->map->only([
                 'version', 'status', 'content_locale', 'body', 'price_amount', 'currency', 'delivery_days', 'payment_terms', 'estimate', 'assumptions', 'submitted_at',
