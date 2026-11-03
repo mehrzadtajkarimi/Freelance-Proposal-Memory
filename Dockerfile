@@ -19,6 +19,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libjpeg62-turbo-dev \
         libonig-dev \
         libpng-dev \
+        libsqlite3-dev \
         libxml2-dev \
         libzip-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
@@ -31,6 +32,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         opcache \
         pcntl \
         pdo_mysql \
+        pdo_sqlite \
+        sqlite3 \
         zip \
     && pecl install redis \
     && docker-php-ext-enable redis \

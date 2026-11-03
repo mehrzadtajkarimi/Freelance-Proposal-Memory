@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\ConversationMessage;
 use App\Models\ProjectRequest;
 use App\Services\ContentSanitizer;
+use App\Services\JsonInputReader;
 use App\Services\WorkflowRecorder;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
@@ -15,7 +16,7 @@ final class MemoryRecordMessageCommand extends Command
 
     protected $description = 'Append a sanitized conversation message to a saved project';
 
-    public function handle(ContentSanitizer $sanitizer, WorkflowRecorder $recorder): int
+    public function handle(ContentSanitizer $sanitizer, WorkflowRecorder $recorder, JsonInputReader $inputReader): int
     {
         if (! $this->option('stdin-json')) {
             $this->error('Pass --stdin-json and provide a body field as JSON on standard input.');
@@ -30,7 +31,7 @@ final class MemoryRecordMessageCommand extends Command
             return self::INVALID;
         }
 
-        $input = json_decode(stream_get_contents(STDIN), true);
+        $input = $inputReader->decode();
         if (! is_array($input) || ! is_string($input['body'] ?? null) || trim($input['body']) === '') {
             $this->error('JSON must include a non-empty body field.');
 

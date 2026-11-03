@@ -6,6 +6,7 @@ use App\Actions\CreateProposalDraft;
 use App\Models\ProjectRequest;
 use App\Models\RuleVersion;
 use App\Services\ContentSanitizer;
+use App\Services\JsonInputReader;
 use Illuminate\Console\Command;
 
 final class MemoryRecordProposalCommand extends Command
@@ -14,15 +15,15 @@ final class MemoryRecordProposalCommand extends Command
 
     protected $description = 'Save a new proposal draft version using active rule versions';
 
-    public function handle(CreateProposalDraft $action, ContentSanitizer $sanitizer): int
+    public function handle(CreateProposalDraft $action, ContentSanitizer $sanitizer, JsonInputReader $inputReader): int
     {
         if (! $this->option('stdin-json')) {
-            $this->error('Pass --stdin-json and provide body, price_amount, currency, delivery_days, assumptions, and optional estimate, payment_terms, and rule_version_ids.');
+            $this->error('Pass --stdin-json and provide body, price_amount, currency, delivery_days, assumptions, and optional content_locale (fa or en), estimate, payment_terms, and rule_version_ids.');
 
             return self::INVALID;
         }
 
-        $input = json_decode(stream_get_contents(STDIN), true);
+        $input = $inputReader->decode();
         if (! is_array($input)) {
             $this->error('Standard input must contain a JSON object.');
 
@@ -32,6 +33,7 @@ final class MemoryRecordProposalCommand extends Command
         $priceValue = $input['price_amount'] ?? null;
         $currency = is_string($input['currency'] ?? null) ? strtoupper(trim($input['currency'])) : '';
         $deliveryValue = $input['delivery_days'] ?? null;
+        $contentLocale = $input['content_locale'] ?? 'en';
         $price = is_int($priceValue) || is_float($priceValue) || is_string($priceValue)
             ? (preg_match('/^\d+(?:\.\d{1,4})?$/D', (string) $priceValue) ? (string) $priceValue : false)
             : false;
@@ -41,10 +43,11 @@ final class MemoryRecordProposalCommand extends Command
             || $price === false || (float) $price <= 0
             || ! preg_match('/^[A-Z]{3}$/D', $currency)
             || $deliveryDays === false || $deliveryDays < 1
+            || ! is_string($contentLocale) || ! in_array($contentLocale, ['fa', 'en'], true)
             || ! array_key_exists('assumptions', $input) || ! is_string($input['assumptions'])
             || (isset($input['payment_terms']) && ! is_array($input['payment_terms']))
             || (isset($input['rule_version_ids']) && ! is_array($input['rule_version_ids']))) {
-            $this->error('JSON must include body, positive price_amount, a three-letter currency code, delivery_days, and assumptions text.');
+            $this->error('JSON must include body, positive price_amount, a three-letter currency code, delivery_days, assumptions text, and an optional content_locale of fa or en.');
 
             return self::INVALID;
         }
@@ -90,6 +93,7 @@ final class MemoryRecordProposalCommand extends Command
             $sanitizer->redactMetadata($estimate),
             $sanitizer->redact((string) ($input['assumptions'] ?? '')),
             $ruleVersions,
+            contentLocale: $contentLocale,
         );
 
         $this->info(json_encode([
@@ -97,6 +101,7 @@ final class MemoryRecordProposalCommand extends Command
             'project_request_id' => $request->id,
             'version' => $proposal->version,
             'status' => $proposal->status,
+            'content_locale' => $proposal->content_locale,
         ], JSON_UNESCAPED_UNICODE));
 
         return self::SUCCESS;

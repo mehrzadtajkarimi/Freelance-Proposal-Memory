@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Actions\ProposeRuleChange;
 use App\Models\Rule;
 use App\Services\ContentSanitizer;
+use App\Services\JsonInputReader;
 use Illuminate\Console\Command;
 
 final class MemoryProposeRuleChangeCommand extends Command
@@ -13,7 +14,7 @@ final class MemoryProposeRuleChangeCommand extends Command
 
     protected $description = 'Save a proposed rule version as pending approval';
 
-    public function handle(ProposeRuleChange $action, ContentSanitizer $sanitizer): int
+    public function handle(ProposeRuleChange $action, ContentSanitizer $sanitizer, JsonInputReader $inputReader): int
     {
         if (! $this->option('stdin-json')) {
             $this->error('Pass --stdin-json and provide body and change_summary fields.');
@@ -21,7 +22,7 @@ final class MemoryProposeRuleChangeCommand extends Command
             return self::INVALID;
         }
 
-        $input = json_decode(stream_get_contents(STDIN), true);
+        $input = $inputReader->decode();
         if (! is_array($input) || trim((string) ($input['body'] ?? '')) === '' || trim((string) ($input['change_summary'] ?? '')) === '') {
             $this->error('JSON must include non-empty body and change_summary fields.');
 

@@ -1,0 +1,27 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  phpunit:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Prepare isolated Docker environment
+        run: |
+          cp .env.example .env
+          sed -i 's/^RUN_MIGRATIONS=.*/RUN_MIGRATIONS=false/' .env
+
+      - name: Start application container
+        run: docker compose up --build --detach app
+
+      - name: Run full test suite
+        run: docker compose exec --no-TTY app composer test

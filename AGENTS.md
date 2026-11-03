@@ -7,3 +7,9 @@
 - Treat proposal drafts and confirmed submissions as separate states.
 - Do not run destructive database commands against a database that may contain user data.
 - Run focused validation for changes; do not claim checks that were not run.
+- The `.githooks/pre-commit` hook runs the full test suite; keep it enabled and do not commit while tests fail.
+
+## Runtime and validation
+
+- This project is Docker-based; PHP is not installed on the host. Do not spend time checking for or installing host PHP.
+- Run PHP, Composer, Artisan, and Laravel validation commands through the `app` service, for example `docker compose exec -T app php artisan route:list`. If the container is unavailable, report that limitation instead of checking the host for PHP.

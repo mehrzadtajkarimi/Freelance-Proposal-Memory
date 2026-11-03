@@ -14,6 +14,14 @@ if [ ! -f vendor/autoload.php ]; then
     composer install --no-interaction --prefer-dist --no-progress
 fi
 
+if [ ! -f public/build/manifest.json ] \
+    || [ package.json -nt public/build/manifest.json ] \
+    || [ vite.config.js -nt public/build/manifest.json ] \
+    || find resources -type f -newer public/build/manifest.json -print -quit | grep -q .; then
+    npm install --no-audit --no-fund --no-package-lock
+    npm run build
+fi
+
 if [ -f .env ] && ! grep -Eq '^APP_KEY=base64:.+' .env; then
     php artisan key:generate --force
 fi

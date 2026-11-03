@@ -25,6 +25,7 @@ final class CreateProposalDraft
         string $assumptions,
         array $ruleVersions,
         string $actor = 'agent',
+        string $contentLocale = 'en',
     ): ProposalVersion {
         if (! preg_match('/^\d+(?:\.\d{1,4})?$/D', $priceAmount)
             || (float) $priceAmount <= 0
@@ -32,8 +33,11 @@ final class CreateProposalDraft
             || $deliveryDays < 1) {
             throw new \InvalidArgumentException('A proposal draft requires a positive price and delivery duration.');
         }
+        if (! in_array($contentLocale, ['fa', 'en'], true)) {
+            throw new \InvalidArgumentException('Proposal content locale must be fa or en.');
+        }
 
-        return DB::transaction(function () use ($request, $body, $priceAmount, $currency, $deliveryDays, $paymentTerms, $estimate, $assumptions, $ruleVersions, $actor): ProposalVersion {
+        return DB::transaction(function () use ($request, $body, $priceAmount, $currency, $deliveryDays, $paymentTerms, $estimate, $assumptions, $ruleVersions, $actor, $contentLocale): ProposalVersion {
             $request = ProjectRequest::query()->lockForUpdate()->findOrFail($request->id);
             $ruleIds = collect($ruleVersions)->map(fn (RuleVersion $version): int => (int) $version->rule_id)
                 ->unique()
@@ -55,6 +59,7 @@ final class CreateProposalDraft
                 'version' => $version,
                 'status' => 'draft',
                 'body' => $body,
+                'content_locale' => $contentLocale,
                 'price_amount' => $priceAmount,
                 'currency' => $currency,
                 'delivery_days' => $deliveryDays,

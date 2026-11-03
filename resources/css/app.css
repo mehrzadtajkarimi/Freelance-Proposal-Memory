@@ -1,0 +1,46 @@
+@import "tailwindcss";
+
+@source "../views/**/*.blade.php";
+@source "../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php";
+@source "../../storage/framework/views/*.php";
+@source "../**/*.js";
+@source "../../app/**/*.php";
+
+@theme {
+    --font-sans: "Vazirmatn Variable", "Inter", "Tahoma", ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+    body {
+        @apply bg-slate-50 text-slate-800 antialiased;
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+        font: inherit;
+    }
+}
+
+@layer components {
+    .panel {
+        @apply rounded-2xl border border-slate-200/80 bg-white shadow-sm shadow-slate-900/[0.03];
+    }
+
+    .field {
+        @apply w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10;
+    }
+
+    .label {
+        @apply mb-2 block text-sm font-semibold text-slate-700;
+    }
+
+    .btn-primary {
+        @apply inline-flex items-center justify-center gap-2 rounded-xl bg-teal-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-teal-800 focus:outline-none focus:ring-4 focus:ring-teal-600/20;
+    }
+
+    .btn-secondary {
+        @apply inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-slate-400/15;
+    }
+}

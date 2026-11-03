@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Actions\ProposeNewRule;
 use App\Services\ContentSanitizer;
+use App\Services\JsonInputReader;
 use Illuminate\Console\Command;
 
 final class MemoryAddRuleCommand extends Command
@@ -12,7 +13,7 @@ final class MemoryAddRuleCommand extends Command
 
     protected $description = 'Save a new rule as pending approval';
 
-    public function handle(ProposeNewRule $action, ContentSanitizer $sanitizer): int
+    public function handle(ProposeNewRule $action, ContentSanitizer $sanitizer, JsonInputReader $inputReader): int
     {
         if (! $this->option('stdin-json')) {
             $this->error('Pass --stdin-json and provide title and body fields.');
@@ -20,7 +21,7 @@ final class MemoryAddRuleCommand extends Command
             return self::INVALID;
         }
 
-        $input = json_decode(stream_get_contents(STDIN), true);
+        $input = $inputReader->decode();
         if (! is_array($input) || trim((string) ($input['title'] ?? '')) === '' || trim((string) ($input['body'] ?? '')) === '') {
             $this->error('JSON must include non-empty title and body fields.');
 

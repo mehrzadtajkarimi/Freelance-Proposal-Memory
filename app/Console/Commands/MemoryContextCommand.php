@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Models\FreelancerProfile;
 use App\Models\LegacyDocument;
 use App\Models\ProjectRequest;
 use App\Models\Rule;
@@ -9,12 +10,31 @@ use Illuminate\Console\Command;
 
 final class MemoryContextCommand extends Command
 {
-    protected $signature = 'memory:context {--project-id= : Include one saved project and its full history}';
+    protected $signature = 'memory:context {--project-id= : Include one saved project and its full history} {--locale= : Proposal output language (fa or en)}';
 
     protected $description = 'Load approved guidance and, when selected, one project history from the database';
 
     public function handle(): int
     {
+        $locale = $this->option('locale') ?: config('app.locale', 'en');
+        if (! in_array($locale, ['fa', 'en'], true)) {
+            $this->error('The proposal output language must be fa or en.');
+
+            return self::INVALID;
+        }
+
+        $this->line('PROPOSAL LANGUAGE');
+        $this->line(json_encode(['content_locale' => $locale], JSON_UNESCAPED_UNICODE));
+
+        $profile = FreelancerProfile::query()->where('profile_key', 'primary')->first();
+        if ($profile) {
+            $this->line('FREELANCER PROFILE');
+            $this->line(json_encode(
+                $profile->localizedValues($locale),
+                JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES,
+            ));
+        }
+
         $this->line('SYSTEM GUIDANCE');
         LegacyDocument::query()
             ->whereIn('document_type', ['agent_instructions', 'system_guidelines'])
@@ -75,6 +95,21 @@ final class MemoryContextCommand extends Command
             return self::FAILURE;
         }
 
+        $this->line('PROPOSAL TASK');
+        $this->line(json_encode([
+            'task' => 'Prepare a concise, tailored client-facing proposal draft for the selected project request.',
+            'content_locale' => $locale,
+            'language_instruction' => $locale === 'fa'
+                ? 'Write all client-facing text in Persian.'
+                : 'Write all client-facing text in English.',
+            'instructions' => [
+                'Use only relevant facts from the freelancer profile and approved rules.',
+                'Do not invent skills, experience, results, credentials, prices, or delivery dates.',
+                'Address the request with a concrete approach without repeating its text.',
+                'Return a draft for review; do not claim it has been submitted.',
+            ],
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+
         $this->line('PROJECT HISTORY');
         $this->line(json_encode([
             'id' => $project->id,
@@ -88,7 +123,7 @@ final class MemoryContextCommand extends Command
             'client_deadline_days' => $project->client_deadline_days,
             'metadata' => $project->metadata,
             'proposals' => $project->proposals->map->only([
-                'version', 'status', 'body', 'price_amount', 'currency', 'delivery_days', 'payment_terms', 'estimate', 'assumptions', 'submitted_at',
+                'version', 'status', 'content_locale', 'body', 'price_amount', 'currency', 'delivery_days', 'payment_terms', 'estimate', 'assumptions', 'submitted_at',
             ]),
             'messages' => $project->messages->map->only(['direction', 'body', 'occurred_at']),
             'workflow_runs' => $project->workflowRuns->map(fn ($run) => [

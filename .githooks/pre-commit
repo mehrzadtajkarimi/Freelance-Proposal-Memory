@@ -1,0 +1,16 @@
+#!/bin/sh
+set -eu
+
+repository_root=$(git rev-parse --show-toplevel)
+cd "$repository_root"
+
+if ! command -v docker >/dev/null 2>&1; then
+    echo "Commit blocked: Docker is required to run the test suite." >&2
+    exit 1
+fi
+
+echo "Running the test suite in the Docker app container..."
+if ! docker compose exec -T app composer test; then
+    echo "Commit blocked: the test suite failed or the app container is unavailable." >&2
+    exit 1
+fi

@@ -15,6 +15,7 @@ final class ProposalVersion extends Model
         'version',
         'status',
         'body',
+        'content_locale',
         'price_amount',
         'currency',
         'delivery_days',

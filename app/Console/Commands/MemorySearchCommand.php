@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\ProjectRequest;
 use App\Models\Rule;
+use App\Services\JsonInputReader;
 use Illuminate\Console\Command;
 
 final class MemorySearchCommand extends Command
@@ -12,11 +13,11 @@ final class MemorySearchCommand extends Command
 
     protected $description = 'Search saved project requests and approved persistent rules';
 
-    public function handle(): int
+    public function handle(JsonInputReader $inputReader): int
     {
         $input = null;
         if ($this->option('stdin-json')) {
-            $input = json_decode(stream_get_contents(STDIN), true);
+            $input = $inputReader->decode();
             if (! is_array($input)) {
                 $this->error('Standard input must contain a JSON object with title and/or text.');
 
@@ -109,7 +110,7 @@ final class MemorySearchCommand extends Command
                 'budget_max_amount' => $request->budget_max_amount,
                 'currency' => $request->currency,
                 'request' => mb_substr($request->request_body, 0, 1200),
-                'latest_proposal' => $request->proposals->first()?->only(['version', 'status', 'body', 'price_amount', 'currency', 'delivery_days', 'estimate']),
+                'latest_proposal' => $request->proposals->first()?->only(['version', 'status', 'content_locale', 'body', 'price_amount', 'currency', 'delivery_days', 'estimate']),
             ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
         }
 

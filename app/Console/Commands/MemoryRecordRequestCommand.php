@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\ProjectRequest;
 use App\Services\ContentSanitizer;
+use App\Services\JsonInputReader;
 use App\Services\WorkflowRecorder;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
@@ -14,7 +15,7 @@ final class MemoryRecordRequestCommand extends Command
 
     protected $description = 'Save a project request and its basic proposal metadata';
 
-    public function handle(ContentSanitizer $sanitizer, WorkflowRecorder $recorder): int
+    public function handle(ContentSanitizer $sanitizer, WorkflowRecorder $recorder, JsonInputReader $inputReader): int
     {
         if (! $this->option('stdin-json')) {
             $this->error('Pass --stdin-json and provide title/body as JSON on standard input.');
@@ -22,7 +23,7 @@ final class MemoryRecordRequestCommand extends Command
             return self::INVALID;
         }
 
-        $input = json_decode(stream_get_contents(STDIN), true);
+        $input = $inputReader->decode();
         if (! is_array($input)
             || ! is_string($input['title'] ?? null) || trim($input['title']) === ''
             || ! is_string($input['body'] ?? null) || trim($input['body']) === '') {
