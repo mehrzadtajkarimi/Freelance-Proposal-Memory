@@ -4,6 +4,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FreelancerProfileController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\OnboardingController;
+use App\Http\Controllers\PaymentStageRuleController;
 use App\Http\Controllers\PersonalDataController;
 use App\Http\Controllers\ProjectRequestController;
 use App\Http\Controllers\ReportController;
@@ -62,6 +63,13 @@ Route::middleware(SetLocale::class)->group(function (): void {
         ->name('settings.freelancer.edit');
     Route::put('/settings/freelancer', [FreelancerProfileController::class, 'update'])
         ->name('settings.freelancer.update');
+
+    Route::get('/settings/payment-stages', [PaymentStageRuleController::class, 'index'])->name('payment-rules.index');
+    Route::get('/settings/payment-stages/create', [PaymentStageRuleController::class, 'create'])->name('payment-rules.create');
+    Route::post('/settings/payment-stages', [PaymentStageRuleController::class, 'store'])->name('payment-rules.store');
+    Route::get('/settings/payment-stages/{paymentRule}/edit', [PaymentStageRuleController::class, 'edit'])->name('payment-rules.edit');
+    Route::put('/settings/payment-stages/{paymentRule}', [PaymentStageRuleController::class, 'update'])->name('payment-rules.update');
+    Route::delete('/settings/payment-stages/{paymentRule}', [PaymentStageRuleController::class, 'destroy'])->name('payment-rules.destroy');
 
     Route::resource('rules', RuleController::class)->except(['destroy']);
     Route::post('/rule-versions/{version}/approve', [RuleController::class, 'approve'])

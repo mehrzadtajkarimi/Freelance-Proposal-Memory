@@ -27,6 +27,7 @@
                         ['route' => 'dashboard', 'label' => 'ui.nav.overview', 'icon' => 'M3 10.5 12 3l9 7.5M5.25 9v11.25h13.5V9M9 20.25v-6h6v6'],
                         ['route' => 'requests.index', 'label' => 'ui.nav.requests', 'icon' => 'M7.5 3.75h9A2.25 2.25 0 0 1 18.75 6v14.25H5.25V6A2.25 2.25 0 0 1 7.5 3.75ZM8.25 8.25h7.5M8.25 12h7.5M8.25 15.75h4.5'],
                         ['route' => 'rules.*', 'label' => 'ui.nav.rules', 'icon' => 'M12 3.75 5.25 6v5.25c0 4.18 2.88 7.9 6.75 9 3.87-1.1 6.75-4.82 6.75-9V6L12 3.75ZM9 12l1.9 1.9L15 9.75'],
+                        ['route' => 'payment-rules.*', 'href' => 'payment-rules.index', 'label' => 'ui.nav.payment_rules', 'icon' => 'M3.75 7.5h16.5M6.75 12h3m-3 4.5h7.5M5.25 4.5h13.5A2.25 2.25 0 0 1 21 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 17.25V6.75A2.25 2.25 0 0 1 5.25 4.5Z'],
                         ['route' => 'reports.index', 'label' => 'ui.nav.reports', 'icon' => 'M4.5 19.5V12m5.25 7.5V6m5.25 13.5v-9m5.25 9V3.75'],
                         ['route' => 'settings.freelancer.edit', 'label' => 'ui.nav.freelancer_profile', 'icon' => 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm7.5 8.25a7.5 7.5 0 0 0-15 0'],
                         ['route' => 'settings.data', 'label' => 'ui.nav.personal_data', 'icon' => 'M12 3.75v16.5m8.25-8.25H3.75m2.4-5.85 11.7 11.7m0-11.7L6.15 17.85'],
@@ -34,7 +35,7 @@
                 @endphp
                 @foreach ($navigation as $item)
                     @php($active = request()->routeIs($item['route']))
-                    <a href="{{ route($item['route'] === 'rules.*' ? 'rules.index' : $item['route']) }}"
+                    <a href="{{ route($item['href'] ?? ($item['route'] === 'rules.*' ? 'rules.index' : $item['route'])) }}"
                        @if ($active) aria-current="page" @endif
                        class="flex shrink-0 items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-medium transition {{ $active ? 'bg-teal-500/15 text-teal-300 ring-1 ring-inset ring-teal-400/15' : 'text-slate-300 hover:bg-white/5 hover:text-white' }}">
                         <svg class="size-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{ $item['icon'] }}" /></svg>

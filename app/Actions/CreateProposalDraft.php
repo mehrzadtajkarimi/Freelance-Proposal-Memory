@@ -6,12 +6,16 @@ use App\Models\ProjectRequest;
 use App\Models\ProposalVersion;
 use App\Models\Rule;
 use App\Models\RuleVersion;
+use App\Services\PaymentStageRuleMatcher;
 use App\Services\WorkflowRecorder;
 use Illuminate\Support\Facades\DB;
 
 final class CreateProposalDraft
 {
-    public function __construct(private readonly WorkflowRecorder $recorder) {}
+    public function __construct(
+        private readonly WorkflowRecorder $recorder,
+        private readonly PaymentStageRuleMatcher $paymentStageRuleMatcher,
+    ) {}
 
     /** @param array<int, RuleVersion> $ruleVersions */
     public function handle(
@@ -36,6 +40,8 @@ final class CreateProposalDraft
         if (! in_array($contentLocale, ['fa', 'en'], true)) {
             throw new \InvalidArgumentException('Proposal content locale must be fa or en.');
         }
+
+        $paymentTerms = $this->paymentStageRuleMatcher->termsFor($priceAmount, $currency, $contentLocale) ?? $paymentTerms;
 
         return DB::transaction(function () use ($request, $body, $priceAmount, $currency, $deliveryDays, $paymentTerms, $estimate, $assumptions, $ruleVersions, $actor, $contentLocale): ProposalVersion {
             $request = ProjectRequest::query()->lockForUpdate()->findOrFail($request->id);

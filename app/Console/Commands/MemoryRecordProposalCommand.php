@@ -15,7 +15,11 @@ final class MemoryRecordProposalCommand extends Command
 
     protected $description = 'Save a new proposal draft version using active rule versions';
 
-    public function handle(CreateProposalDraft $action, ContentSanitizer $sanitizer, JsonInputReader $inputReader): int
+    public function handle(
+        CreateProposalDraft $action,
+        ContentSanitizer $sanitizer,
+        JsonInputReader $inputReader,
+    ): int
     {
         if (! $this->option('stdin-json')) {
             $this->error('Pass --stdin-json and provide body, price_amount, currency, delivery_days, assumptions, and optional content_locale (fa or en), estimate, payment_terms, and rule_version_ids.');

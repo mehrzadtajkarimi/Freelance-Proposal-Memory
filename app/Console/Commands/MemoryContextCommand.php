@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\FreelancerProfile;
 use App\Models\LegacyDocument;
+use App\Models\PaymentStageRule;
 use App\Models\ProjectRequest;
 use App\Models\Rule;
 use Illuminate\Console\Command;
@@ -39,6 +40,10 @@ final class MemoryContextCommand extends Command
             'approved_guidance' => [
                 'source' => 'rules and rule_versions tables',
                 'role' => 'Only the current approved version is active; imported changes remain pending until approved.',
+            ],
+            'payment_stage_rules' => [
+                'source' => 'payment_stage_rules table',
+                'role' => 'User-managed payment conditions and stage descriptions; match against the final proposed amount, never the job advertisement budget.',
             ],
             'project_history' => [
                 'source' => 'project_requests, proposal_versions, conversation_messages, workflow_runs, and workflow_events tables',
@@ -127,6 +132,27 @@ final class MemoryContextCommand extends Command
             ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
         }
 
+        $paymentStageRules = PaymentStageRule::query()
+            ->orderByRaw('minimum_amount_toman IS NOT NULL')
+            ->orderBy('minimum_amount_toman')
+            ->get()
+            ->map(fn (PaymentStageRule $rule): array => [
+                'id' => $rule->id,
+                'name_fa' => $rule->name_fa,
+                'name_en' => $rule->name_en,
+                'minimum_amount_toman' => $rule->minimum_amount_toman,
+                'maximum_amount_toman' => $rule->maximum_amount_toman,
+                'basis' => 'final_proposed_amount_toman',
+                'stages' => collect($rule->stages)->sortBy('position')->values(),
+            ]);
+
+        $this->line('PAYMENT STAGE RULES');
+        $this->line(json_encode([
+            'basis' => 'final_proposed_amount_toman',
+            'instruction' => 'Select by the final amount proposed to the client. Never use the job advertisement budget for this condition. Convert rials to tomans before matching when needed.',
+            'rules' => $paymentStageRules,
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+
         $projectId = $this->option('project-id');
         if (! $projectId) {
             return self::SUCCESS;
@@ -163,6 +189,7 @@ final class MemoryContextCommand extends Command
                 'Do not invent skills, experience, results, credentials, prices, or delivery dates.',
                 'Address the request with a concrete approach without repeating its text.',
                 'Mention the possibility of continued collaboration after project completion only when this project is marked as full-time.',
+                'Select a saved payment-stage condition using the final proposed amount, never the project advertisement budget; use its stage percentages and descriptions when a condition matches.',
                 'Return a draft for review and manual copying; do not submit it or claim it has been submitted.',
             ],
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
