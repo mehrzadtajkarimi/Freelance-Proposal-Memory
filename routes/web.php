@@ -37,6 +37,7 @@ Route::post('/locale/{locale}', [LocaleController::class, 'update'])
 
 Route::middleware(SetLocale::class)->group(function (): void {
     Route::get('/', DashboardController::class)->name('dashboard');
+    Route::view('/about', 'about')->name('about');
     Route::get('/setup', [OnboardingController::class, 'index'])->name('onboarding.index');
     Route::post('/setup/start', [OnboardingController::class, 'start'])->name('onboarding.start');
     Route::get('/setup/step/{step}', [OnboardingController::class, 'showStep'])
@@ -56,6 +57,7 @@ Route::middleware(SetLocale::class)->group(function (): void {
     Route::post('/settings/data/import', [PersonalDataController::class, 'import'])->name('settings.data.import');
 
     Route::get('/requests', [ProjectRequestController::class, 'index'])->name('requests.index');
+    Route::get('/requests/{projectRequest}', [ProjectRequestController::class, 'show'])->name('requests.show');
     Route::put('/requests/{projectRequest}/full-time', [ProjectRequestController::class, 'updateFullTime'])
         ->name('requests.full-time.update');
     Route::get('/reports', ReportController::class)->name('reports.index');

@@ -25,6 +25,7 @@
                 @php
                     $navigation = [
                         ['route' => 'dashboard', 'label' => 'ui.nav.overview', 'icon' => 'M3 10.5 12 3l9 7.5M5.25 9v11.25h13.5V9M9 20.25v-6h6v6'],
+                        ['route' => 'about', 'label' => 'ui.nav.about', 'icon' => 'M12 16.5h.01M9.75 9a2.25 2.25 0 1 1 3.86 1.58c-.9.9-1.61 1.42-1.61 2.92m8.25-1.5a8.25 8.25 0 1 1-16.5 0 8.25 8.25 0 0 1 16.5 0Z'],
                         ['route' => 'requests.index', 'label' => 'ui.nav.requests', 'icon' => 'M7.5 3.75h9A2.25 2.25 0 0 1 18.75 6v14.25H5.25V6A2.25 2.25 0 0 1 7.5 3.75ZM8.25 8.25h7.5M8.25 12h7.5M8.25 15.75h4.5'],
                         ['route' => 'rules.*', 'label' => 'ui.nav.rules', 'icon' => 'M12 3.75 5.25 6v5.25c0 4.18 2.88 7.9 6.75 9 3.87-1.1 6.75-4.82 6.75-9V6L12 3.75ZM9 12l1.9 1.9L15 9.75'],
                         ['route' => 'payment-rules.*', 'href' => 'payment-rules.index', 'label' => 'ui.nav.payment_rules', 'icon' => 'M3.75 7.5h16.5M6.75 12h3m-3 4.5h7.5M5.25 4.5h13.5A2.25 2.25 0 0 1 21 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 17.25V6.75A2.25 2.25 0 0 1 5.25 4.5Z'],
