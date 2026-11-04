@@ -28,6 +28,7 @@
                         <div class="flex flex-wrap items-center gap-2">
                             <h2 class="text-base font-semibold text-slate-950">{{ $rule->{'name_'.app()->getLocale()} ?? $rule->name_fa }}</h2>
                             <span class="rounded-full bg-teal-50 px-2.5 py-1 text-[11px] font-semibold text-teal-800">{{ $range }}</span>
+                            <span class="rounded-full px-2.5 py-1 text-[11px] font-semibold {{ $rule->status === 'approved' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-800' }}">{{ $rule->status === 'approved' ? __('ui.common.approved') : __('ui.common.pending') }}</span>
                         </div>
                         <ol class="mt-4 space-y-3">
                             @foreach ($rule->stages as $stage)
@@ -43,6 +44,12 @@
                         </ol>
                     </div>
                     <div class="flex shrink-0 gap-2">
+                        @if ($rule->status === 'pending_approval')
+                            <form method="POST" action="{{ route('payment-rules.approve', $rule) }}">
+                                @csrf
+                                <button type="submit" class="btn-primary bg-amber-700! hover:bg-amber-800!">{{ __('ui.payment_rules.approve') }}</button>
+                            </form>
+                        @endif
                         <a href="{{ route('payment-rules.edit', $rule) }}" class="btn-secondary">{{ __('ui.payment_rules.edit') }}</a>
                         <form method="POST" action="{{ route('payment-rules.destroy', $rule) }}" onsubmit="return confirm('{{ __('ui.payment_rules.confirm_delete') }}')">
                             @csrf

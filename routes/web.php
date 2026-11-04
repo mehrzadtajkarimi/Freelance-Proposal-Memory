@@ -69,6 +69,7 @@ Route::middleware(SetLocale::class)->group(function (): void {
     Route::post('/settings/payment-stages', [PaymentStageRuleController::class, 'store'])->name('payment-rules.store');
     Route::get('/settings/payment-stages/{paymentRule}/edit', [PaymentStageRuleController::class, 'edit'])->name('payment-rules.edit');
     Route::put('/settings/payment-stages/{paymentRule}', [PaymentStageRuleController::class, 'update'])->name('payment-rules.update');
+    Route::post('/settings/payment-stages/{paymentRule}/approve', [PaymentStageRuleController::class, 'approve'])->name('payment-rules.approve');
     Route::delete('/settings/payment-stages/{paymentRule}', [PaymentStageRuleController::class, 'destroy'])->name('payment-rules.destroy');
 
     Route::resource('rules', RuleController::class)->except(['destroy']);

@@ -23,6 +23,7 @@ final class RuleController
 
         $rules = Rule::query()
             ->with(['projectRequest', 'versions' => fn ($query) => $query->orderByDesc('version')])
+            ->when(! ($filters['status'] ?? null), fn ($query) => $query->whereIn('status', ['approved', 'pending_approval']))
             ->when($filters['scope'] ?? null, fn ($query, $scope) => $query->where('scope', $scope))
             ->when($filters['status'] ?? null, function ($query, $status): void {
                 if ($status === 'pending_approval') {

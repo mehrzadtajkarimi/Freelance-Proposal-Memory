@@ -39,7 +39,11 @@ final class PaymentStageRuleController
     public function store(Request $request): RedirectResponse
     {
         $data = $this->validatedRule($request);
-        $rule = PaymentStageRule::query()->create($data);
+        $rule = PaymentStageRule::query()->create([
+            ...$data,
+            'status' => 'pending_approval',
+            'approved_at' => null,
+        ]);
 
         return redirect()->route('payment-rules.index')->with('success', __('ui.payment_rules.created', ['name' => $rule->{'name_'.app()->getLocale()}]));
     }
@@ -52,7 +56,11 @@ final class PaymentStageRuleController
     public function update(Request $request, PaymentStageRule $paymentRule): RedirectResponse
     {
         $data = $this->validatedRule($request, $paymentRule);
-        $paymentRule->update($data);
+        $paymentRule->update([
+            ...$data,
+            'status' => 'pending_approval',
+            'approved_at' => null,
+        ]);
 
         return redirect()->route('payment-rules.index')->with('success', __('ui.payment_rules.updated', ['name' => $paymentRule->{'name_'.app()->getLocale()}]));
     }
@@ -63,6 +71,18 @@ final class PaymentStageRuleController
         $paymentRule->delete();
 
         return redirect()->route('payment-rules.index')->with('success', __('ui.payment_rules.deleted', ['name' => $name]));
+    }
+
+    public function approve(PaymentStageRule $paymentRule): RedirectResponse
+    {
+        abort_unless($paymentRule->status === 'pending_approval', 404);
+
+        $paymentRule->forceFill([
+            'status' => 'approved',
+            'approved_at' => now(),
+        ])->save();
+
+        return redirect()->route('payment-rules.index')->with('success', __('ui.payment_rules.approved'));
     }
 
     /** @return array{name_fa: string, name_en: string, minimum_amount_toman: ?int, maximum_amount_toman: ?int, stages: array<int, array<string, int|string>>} */
@@ -103,6 +123,7 @@ final class PaymentStageRuleController
         }
 
         $hasOverlap = PaymentStageRule::query()
+            ->whereIn('status', ['approved', 'pending_approval'])
             ->when($except, fn ($query) => $query->where('id', '!=', $except->getKey()))
             ->get(['id', 'minimum_amount_toman', 'maximum_amount_toman'])
             ->contains(function (PaymentStageRule $existing) use ($minimum, $maximum): bool {

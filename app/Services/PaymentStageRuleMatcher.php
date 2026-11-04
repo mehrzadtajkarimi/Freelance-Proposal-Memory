@@ -19,6 +19,7 @@ final class PaymentStageRuleMatcher
         }
 
         $rule = PaymentStageRule::query()
+            ->where('status', 'approved')
             ->orderByRaw('minimum_amount_toman IS NOT NULL')
             ->orderBy('minimum_amount_toman')
             ->get()

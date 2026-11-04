@@ -12,6 +12,8 @@ final class PaymentStageRule extends Model
         'minimum_amount_toman',
         'maximum_amount_toman',
         'stages',
+        'status',
+        'approved_at',
     ];
 
     protected function casts(): array
@@ -20,6 +22,7 @@ final class PaymentStageRule extends Model
             'minimum_amount_toman' => 'integer',
             'maximum_amount_toman' => 'integer',
             'stages' => 'array',
+            'approved_at' => 'datetime',
         ];
     }
 }

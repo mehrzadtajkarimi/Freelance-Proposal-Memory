@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\FreelancerProfile;
+use App\Services\AgentRulePackage;
 use App\Services\PersonalDataPackage;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -16,7 +17,7 @@ final class PersonalDataController
         return view('settings.data');
     }
 
-    public function export(PersonalDataPackage $package): StreamedResponse
+    public function export(AgentRulePackage $package): StreamedResponse
     {
         $content = json_encode(
             $package->export(),
@@ -27,16 +28,23 @@ final class PersonalDataController
             static function () use ($content): void {
                 echo $content;
             },
-            'freelance-proposal-memory-'.now()->format('Y-m-d').'.json',
+            'freelance-proposal-memory-rules-'.now()->format('Y-m-d').'.json',
             ['Content-Type' => 'application/json; charset=UTF-8'],
         );
     }
 
-    public function import(Request $request, PersonalDataPackage $package): RedirectResponse
+    public function import(Request $request, AgentRulePackage $package): RedirectResponse
     {
-        $summary = $this->importUpload($request, $package);
+        $data = $request->validate([
+            'file' => ['required', 'file', 'max:2048'],
+        ]);
+        $summary = $package->replace($package->validateUpload($data['file']));
 
-        return redirect()->route('settings.data')->with('success', $this->summaryMessage($summary));
+        return redirect()->route('settings.data')->with('success', __('ui.data.rules_imported', [
+            'rules' => $summary['rules_imported'],
+            'payment_rules' => $summary['payment_stage_rules_imported'],
+            'archived' => $summary['rules_archived'],
+        ]));
     }
 
     public function importForOnboarding(Request $request, PersonalDataPackage $package): RedirectResponse
@@ -47,7 +55,7 @@ final class PersonalDataController
             ['setup_completed_at' => now()],
         );
 
-        return redirect()->route('dashboard')->with('success', $this->summaryMessage($summary));
+        return redirect()->route('dashboard')->with('success', $this->personalDataSummaryMessage($summary));
     }
 
     /** @return array{profile_fields: int, experiences: int, rules_created: int, rules_updated: int, rules_unchanged: int} */
@@ -61,7 +69,7 @@ final class PersonalDataController
     }
 
     /** @param array{profile_fields: int, experiences: int, rules_created: int, rules_updated: int, rules_unchanged: int} $summary */
-    private function summaryMessage(array $summary): string
+    private function personalDataSummaryMessage(array $summary): string
     {
         return __('ui.data.imported', [
             'profile' => $summary['profile_fields'],
