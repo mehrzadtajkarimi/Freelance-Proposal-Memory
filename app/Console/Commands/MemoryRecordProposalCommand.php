@@ -13,7 +13,7 @@ final class MemoryRecordProposalCommand extends Command
 {
     protected $signature = 'memory:record-proposal {projectId : Saved project request ID} {--stdin-json : Read proposal fields from standard input}';
 
-    protected $description = 'Save a new proposal draft version using active rule versions';
+    protected $description = 'Save a new proposal draft with a required tailored idea using active rule versions';
 
     public function handle(
         CreateProposalDraft $action,
@@ -22,7 +22,7 @@ final class MemoryRecordProposalCommand extends Command
     ): int
     {
         if (! $this->option('stdin-json')) {
-            $this->error('Pass --stdin-json and provide body, price_amount, currency, delivery_days, assumptions, and optional content_locale (fa or en), estimate, payment_terms, and rule_version_ids.');
+            $this->error('Pass --stdin-json and provide body, key_idea, price_amount, currency, delivery_days, assumptions, and optional content_locale (fa or en), estimate, payment_terms, and rule_version_ids.');
 
             return self::INVALID;
         }
@@ -44,6 +44,8 @@ final class MemoryRecordProposalCommand extends Command
         $deliveryDays = is_int($deliveryValue) || is_string($deliveryValue) ? filter_var($deliveryValue, FILTER_VALIDATE_INT) : false;
         $estimate = is_array($input['estimate'] ?? null) ? $input['estimate'] : [];
         if (! is_string($input['body'] ?? null) || trim($input['body']) === ''
+            || ! is_string($input['key_idea'] ?? null) || trim($input['key_idea']) === ''
+            || mb_strlen(trim($input['key_idea'])) > 1800
             || $price === false || (float) $price <= 0
             || ! preg_match('/^[A-Z]{3}$/D', $currency)
             || $deliveryDays === false || $deliveryDays < 1
@@ -51,7 +53,7 @@ final class MemoryRecordProposalCommand extends Command
             || ! array_key_exists('assumptions', $input) || ! is_string($input['assumptions'])
             || (isset($input['payment_terms']) && ! is_array($input['payment_terms']))
             || (isset($input['rule_version_ids']) && ! is_array($input['rule_version_ids']))) {
-            $this->error('JSON must include body, positive price_amount, a three-letter currency code, delivery_days, assumptions text, and an optional content_locale of fa or en.');
+            $this->error('JSON must include body, a non-empty key_idea of at most 1800 characters, positive price_amount, a three-letter currency code, delivery_days, assumptions text, and an optional content_locale of fa or en.');
 
             return self::INVALID;
         }
@@ -87,6 +89,8 @@ final class MemoryRecordProposalCommand extends Command
             return self::INVALID;
         }
 
+        $keyIdea = $sanitizer->redact(trim($input['key_idea']));
+
         $proposal = $action->handle(
             $request,
             $sanitizer->redact(trim($input['body'])),
@@ -97,6 +101,7 @@ final class MemoryRecordProposalCommand extends Command
             $sanitizer->redactMetadata($estimate),
             $sanitizer->redact((string) ($input['assumptions'] ?? '')),
             $ruleVersions,
+            $keyIdea,
             contentLocale: $contentLocale,
         );
 

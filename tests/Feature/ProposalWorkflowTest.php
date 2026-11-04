@@ -29,6 +29,7 @@ final class ProposalWorkflowTest extends TestCase
             ['design' => 2, 'development' => 3],
             'Content and access will be provided.',
             [$ruleVersion],
+            'A short onboarding checklist will surface missing content before implementation.',
             'automated-test',
             'fa',
         );
@@ -103,6 +104,7 @@ final class ProposalWorkflowTest extends TestCase
                 [],
                 'Test assumption.',
                 [],
+                'A clear implementation checkpoint plan for the request.',
             );
             $this->fail('A zero-price proposal must be rejected.');
         } catch (\InvalidArgumentException $exception) {
@@ -130,6 +132,7 @@ final class ProposalWorkflowTest extends TestCase
                 [],
                 'Test assumption.',
                 [$staleVersion],
+                'A review checklist matched to the client workflow.',
             );
             $this->fail('A stale rule version must not be attached to a proposal run.');
         } catch (\InvalidArgumentException $exception) {

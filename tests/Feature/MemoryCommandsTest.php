@@ -55,6 +55,7 @@ final class MemoryCommandsTest extends TestCase
         $ruleVersion = $this->createApprovedRuleVersion();
         $this->provideJsonInput([
             'body' => 'A proposal draft for the saved request.',
+            'key_idea' => 'Add a focused onboarding checklist tailored to the client workflow.',
             'price_amount' => '250.00',
             'currency' => 'usd',
             'content_locale' => 'fa',
@@ -85,6 +86,7 @@ final class MemoryCommandsTest extends TestCase
         $projectRequest = $this->createProjectRequest();
         $this->provideJsonInput([
             'body' => 'A proposal draft.',
+            'key_idea' => 'Use a compact implementation roadmap tailored to the request.',
             'price_amount' => '250.00',
             'currency' => 'USD',
             'content_locale' => 'de',

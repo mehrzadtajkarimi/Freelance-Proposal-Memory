@@ -28,6 +28,7 @@ final class CreateProposalDraft
         array $estimate,
         string $assumptions,
         array $ruleVersions,
+        string $keyIdea,
         string $actor = 'agent',
         string $contentLocale = 'en',
     ): ProposalVersion {
@@ -40,10 +41,16 @@ final class CreateProposalDraft
         if (! in_array($contentLocale, ['fa', 'en'], true)) {
             throw new \InvalidArgumentException('Proposal content locale must be fa or en.');
         }
+        if (trim($keyIdea) === '' || mb_strlen(trim($keyIdea)) > 1800) {
+            throw new \InvalidArgumentException('A proposal draft requires a non-empty tailored idea of at most 1800 characters.');
+        }
+
+        $ideaHeading = $contentLocale === 'fa' ? 'ایدهٔ کاربردی برای پروژهٔ شما' : 'A practical idea for your project';
+        $body = trim($body)."\n\n{$ideaHeading}:\n".trim($keyIdea);
 
         $paymentTerms = $this->paymentStageRuleMatcher->termsFor($priceAmount, $currency, $contentLocale) ?? $paymentTerms;
 
-        return DB::transaction(function () use ($request, $body, $priceAmount, $currency, $deliveryDays, $paymentTerms, $estimate, $assumptions, $ruleVersions, $actor, $contentLocale): ProposalVersion {
+        return DB::transaction(function () use ($request, $body, $keyIdea, $priceAmount, $currency, $deliveryDays, $paymentTerms, $estimate, $assumptions, $ruleVersions, $actor, $contentLocale): ProposalVersion {
             $request = ProjectRequest::query()->lockForUpdate()->findOrFail($request->id);
             $ruleIds = collect($ruleVersions)->map(fn (RuleVersion $version): int => (int) $version->rule_id)
                 ->unique()
@@ -65,6 +72,7 @@ final class CreateProposalDraft
                 'version' => $version,
                 'status' => 'draft',
                 'body' => $body,
+                'key_idea' => trim($keyIdea),
                 'content_locale' => $contentLocale,
                 'price_amount' => $priceAmount,
                 'currency' => $currency,
