@@ -24,7 +24,10 @@ final class MemorySearch
         $query = ProjectRequest::query()
             ->select('project_requests.*')
             ->when($exactTitle !== null, fn (Builder $query) => $query->where('project_requests.title', $exactTitle))
-            ->with(['proposals' => fn ($proposals) => $proposals->orderByDesc('version')]);
+            ->with([
+                'proposals' => fn ($proposals) => $proposals->orderByDesc('version'),
+                'emphases',
+            ]);
 
         if ($this->usesFullText($terms)) {
             $query->where(function (Builder $matches) use ($searchText): void {

@@ -43,10 +43,10 @@ final class MemoryContextCommand extends Command
             ],
             'payment_stage_rules' => [
                 'source' => 'payment_stage_rules table',
-                'role' => 'User-managed payment conditions and stage descriptions; match against the final proposed amount, never the job advertisement budget.',
+                'role' => 'Only explicitly approved conditions are active. Treat stages as internal release guidance and never include their percentages or release timing in client-facing proposal text.',
             ],
             'project_history' => [
-                'source' => 'project_requests, proposal_versions, conversation_messages, workflow_runs, and workflow_events tables',
+                'source' => 'project_requests, request_emphases, proposal_versions, conversation_messages, workflow_runs, and workflow_events tables',
                 'role' => 'Project-specific facts and history; do not treat them as global rules.',
             ],
             'legacy_documents' => [
@@ -133,6 +133,7 @@ final class MemoryContextCommand extends Command
         }
 
         $paymentStageRules = PaymentStageRule::query()
+            ->where('status', 'approved')
             ->orderByRaw('minimum_amount_toman IS NOT NULL')
             ->orderBy('minimum_amount_toman')
             ->get()
@@ -161,6 +162,7 @@ final class MemoryContextCommand extends Command
         $project = ProjectRequest::query()
             ->with([
                 'legacyDocument',
+                'emphases',
                 'proposals' => fn ($query) => $query->orderByDesc('version'),
                 'messages' => fn ($query) => $query->orderBy('occurred_at'),
                 'workflowRuns' => fn ($query) => $query->orderBy('started_at'),
@@ -178,7 +180,7 @@ final class MemoryContextCommand extends Command
 
         $this->line('PROPOSAL TASK');
         $this->line(json_encode([
-                'task' => 'Prepare a concise, tailored client-facing proposal draft for the selected project request. The app does not generate proposals or submit to freelance platforms; return text for review and manual copying only.',
+            'task' => 'Prepare a concise, tailored client-facing proposal draft for the selected project request. The app does not generate proposals or submit to freelance platforms; return text for review and manual copying only.',
             'content_locale' => $locale,
             'language_instruction' => $locale === 'fa'
                 ? 'Write all client-facing text in Persian.'
@@ -187,6 +189,10 @@ final class MemoryContextCommand extends Command
                 'Use only relevant facts from the freelancer profile and approved rules.',
                 'Review every saved work experience against this project title and full request before writing; mention only directly relevant, supported experience.',
                 'Do not invent skills, experience, results, credentials, prices, or delivery dates.',
+                'Develop one concise, concrete, request-specific idea that would make the client outcome more valuable or clearer. Keep it feasible and grounded in the request and verified experience; do not make unsupported promises. Return it separately as key_idea, outside body, so the recorder can add it once under a localized heading.',
+                'Use the saved source, client, deadline, and listing facts as evidence; treat null values as unknown and never infer false from missing data.',
+                'Review every saved emphasis separately. Keep each source excerpt distinct from its interpretation, and address relevant emphases without claiming unsupported details.',
+                'When a posting time was derived from relative source text, retain the raw label and derivation basis; do not imply precision beyond what the source displayed.',
                 'Address the request with a concrete approach without repeating its text.',
                 'Mention the possibility of continued collaboration after project completion only when this project is marked as full-time.',
                 'Select a saved payment-stage condition using the final proposed amount, never the project advertisement budget; use its stage percentages and descriptions when a condition matches.',
@@ -199,16 +205,37 @@ final class MemoryContextCommand extends Command
             'id' => $project->id,
             'title' => $project->title,
             'platform' => $project->platform,
+            'external_id' => $project->external_id,
             'status' => $project->status,
             'request_body' => $project->request_body,
             'budget_min_amount' => $project->budget_min_amount,
             'budget_max_amount' => $project->budget_max_amount,
             'currency' => $project->currency,
             'client_deadline_days' => $project->client_deadline_days,
-            'is_full_time' => $project->is_full_time,
+            'client_deadline_text' => $project->client_deadline_text,
+            'source_url' => $project->source_url,
+            'client_location_text' => $project->client_location_text,
+            'client_city' => $project->client_city,
+            'client_region' => $project->client_region,
+            'client_country' => $project->client_country,
+            'posted_at' => $project->posted_at,
+            'posted_time_text' => $project->posted_time_text,
+            'posted_at_basis' => $project->posted_at_basis,
+            'captured_at' => $project->captured_at,
+            'source_timezone' => $project->source_timezone,
+            'client_is_new' => $project->client_is_new,
+            'client_reviews_count' => $project->client_reviews_count,
+            'client_rating' => $project->client_rating,
+            'client_rating_scale' => $project->client_rating_scale,
+            'client_payment_verified' => $project->client_payment_verified,
+            'applicants_count' => $project->applicants_count,
+            'is_full_time' => $project->is_full_time_known ? $project->is_full_time : null,
+            'is_full_time_known' => $project->is_full_time_known,
+            'is_featured' => $project->is_featured,
+            'emphases' => $project->emphases->map->only(['position', 'title', 'source_excerpt', 'interpretation']),
             'metadata' => $project->metadata,
             'proposals' => $project->proposals->map->only([
-                'version', 'status', 'content_locale', 'body', 'price_amount', 'currency', 'delivery_days', 'payment_terms', 'estimate', 'assumptions', 'submitted_at',
+                'version', 'status', 'content_locale', 'key_idea', 'body', 'price_amount', 'currency', 'delivery_days', 'payment_terms', 'estimate', 'assumptions', 'submitted_at',
             ]),
             'messages' => $project->messages->map->only(['direction', 'body', 'occurred_at']),
             'workflow_runs' => $project->workflowRuns->map(fn ($run) => [

@@ -50,7 +50,10 @@ final class MemorySearchCommand extends Command
         $exact = $title !== ''
             ? ProjectRequest::query()
                 ->where('title', $title)
-                ->with(['proposals' => fn ($query) => $query->orderByDesc('version')])
+                ->with([
+                    'proposals' => fn ($query) => $query->orderByDesc('version'),
+                    'emphases',
+                ])
                 ->orderByDesc('updated_at')
                 ->limit(10)
                 ->get()
@@ -99,14 +102,38 @@ final class MemorySearchCommand extends Command
                 'id' => $request->id,
                 'title' => $request->title,
                 'platform' => $request->platform,
+                'external_id' => $request->external_id,
                 'status' => $request->status,
                 'budget_min_amount' => $request->budget_min_amount,
                 'budget_max_amount' => $request->budget_max_amount,
                 'currency' => $request->currency,
+                'source_url' => $request->source_url,
+                'client_location_text' => $request->client_location_text,
+                'client_city' => $request->client_city,
+                'client_region' => $request->client_region,
+                'client_country' => $request->client_country,
+                'client_deadline_days' => $request->client_deadline_days,
+                'client_deadline_text' => $request->client_deadline_text,
+                'posted_at' => $request->posted_at,
+                'posted_time_text' => $request->posted_time_text,
+                'posted_at_basis' => $request->posted_at_basis,
+                'captured_at' => $request->captured_at,
+                'source_timezone' => $request->source_timezone,
+                'client_is_new' => $request->client_is_new,
+                'client_reviews_count' => $request->client_reviews_count,
+                'client_rating' => $request->client_rating,
+                'client_rating_scale' => $request->client_rating_scale,
+                'client_payment_verified' => $request->client_payment_verified,
+                'applicants_count' => $request->applicants_count,
+                'is_full_time' => $request->is_full_time_known ? $request->is_full_time : null,
+                'is_full_time_known' => $request->is_full_time_known,
+                'is_featured' => $request->is_featured,
+                'emphases' => $request->emphases->map->only(['position', 'title', 'source_excerpt', 'interpretation']),
+                'metadata' => $request->metadata,
                 'match_score' => $isExact ? 10000 : $this->requestScore($request),
                 'match_basis' => $basis,
                 'request' => mb_substr($request->request_body, 0, 1200),
-                'latest_proposal' => $request->proposals->first()?->only(['version', 'status', 'content_locale', 'body', 'price_amount', 'currency', 'delivery_days', 'estimate']),
+                'latest_proposal' => $request->proposals->first()?->only(['version', 'status', 'content_locale', 'key_idea', 'body', 'price_amount', 'currency', 'delivery_days', 'estimate']),
             ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
         }
 

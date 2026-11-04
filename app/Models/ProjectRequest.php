@@ -21,6 +21,25 @@ final class ProjectRequest extends Model
         'budget_max_amount',
         'currency',
         'client_deadline_days',
+        'source_url',
+        'client_location_text',
+        'client_city',
+        'client_region',
+        'client_country',
+        'client_deadline_text',
+        'posted_at',
+        'posted_time_text',
+        'posted_at_basis',
+        'captured_at',
+        'source_timezone',
+        'client_is_new',
+        'client_reviews_count',
+        'client_rating',
+        'client_rating_scale',
+        'client_payment_verified',
+        'applicants_count',
+        'is_featured',
+        'is_full_time_known',
         'is_full_time',
         'metadata',
     ];
@@ -30,6 +49,14 @@ final class ProjectRequest extends Model
         return [
             'budget_min_amount' => 'decimal:4',
             'budget_max_amount' => 'decimal:4',
+            'posted_at' => 'immutable_datetime',
+            'captured_at' => 'immutable_datetime',
+            'client_rating' => 'decimal:3',
+            'client_rating_scale' => 'decimal:3',
+            'client_is_new' => 'boolean',
+            'client_payment_verified' => 'boolean',
+            'is_featured' => 'boolean',
+            'is_full_time_known' => 'boolean',
             'is_full_time' => 'boolean',
             'metadata' => 'array',
         ];
@@ -66,6 +93,11 @@ final class ProjectRequest extends Model
     public function proposals(): HasMany
     {
         return $this->hasMany(ProposalVersion::class);
+    }
+
+    public function emphases(): HasMany
+    {
+        return $this->hasMany(RequestEmphasis::class)->orderBy('position');
     }
 
     public function messages(): HasMany

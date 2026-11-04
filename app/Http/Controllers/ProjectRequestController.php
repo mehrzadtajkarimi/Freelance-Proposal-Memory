@@ -26,6 +26,16 @@ final class ProjectRequestController
         return view('requests.index', compact('requests', 'filters'));
     }
 
+    public function show(ProjectRequest $projectRequest): View
+    {
+        $projectRequest->load([
+            'emphases',
+            'proposals' => fn ($query) => $query->orderByDesc('version'),
+        ]);
+
+        return view('requests.show', compact('projectRequest'));
+    }
+
     public function updateFullTime(Request $request, ProjectRequest $projectRequest): RedirectResponse
     {
         $validated = $request->validate([
@@ -34,6 +44,7 @@ final class ProjectRequestController
 
         $projectRequest->update([
             'is_full_time' => (bool) $validated['is_full_time'],
+            'is_full_time_known' => true,
         ]);
 
         return redirect()
